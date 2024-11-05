@@ -1,21 +1,24 @@
 // src/components/BootcampApp.tsx
 import React, { useState, useEffect } from 'react';
 
+// Firebase imports
 import { 
-    GoogleAuthProvider, 
-    signInWithPopup, 
-    signOut, 
-    onAuthStateChanged,
-    User 
-  } from 'firebase/auth';
-  import { 
-    collection, 
-    addDoc, 
-    getDocs, 
-    query,
-    where,
-    Timestamp 
-  } from 'firebase/firestore';
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged,
+  User 
+} from 'firebase/auth';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query,
+  where,
+  Timestamp 
+} from 'firebase/firestore';
+
+// UI Components
 import { 
   LogIn, 
   LogOut, 
@@ -28,7 +31,7 @@ import {
 // UI Components
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { 
+import {
   Card,
   CardContent,
   CardDescription,
@@ -36,25 +39,22 @@ import {
   CardTitle,
   CardFooter
 } from './ui/card';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from './ui/tabs';
 
 // Local imports
-import { auth, db } from '../lib/firebase';
-import { isUserAdmin } from '../lib/firebase';
+import { auth, db, isUserAdmin } from '../lib/firebase';
 import { bootcamps } from '../data/bootcamps';
-import type { 
-  Bootcamp, 
-  Registration, 
-  RegistrationFormData 
-} from '../types/bootcamp';
+import type { Bootcamp, Registration, RegistrationFormData } from '../types/bootcamp';
 import { AdminPanel } from './AdminPanel';
 import { AdminManagement } from './AdminManagement';
 import { RegistrationDialog } from './RegistrationDialog';
+import { sendThankYouEmail } from './services/emailService';
+
 export const BootcampApp: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -198,8 +198,25 @@ export const BootcampApp: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
 
+      // Guardar la inscripción
       await addDoc(collection(db, 'registrations'), registrationData);
-      setMessage(`¡Te has registrado exitosamente en ${bootcamp.name}!`);
+
+      // Enviar correo de agradecimiento
+      if (user.email) {
+        try {
+          await sendThankYouEmail({
+            to: user.email,
+            bootcampName: bootcamp.name,
+            schedule: formData.schedule,
+            startDate: formData.selectedStartDate
+          });
+          setMessage(`¡Te has registrado exitosamente en ${bootcamp.name}! Te hemos enviado un correo de confirmación.`);
+        } catch (emailError) {
+          console.error('Error al enviar correo:', emailError);
+          setMessage(`¡Te has registrado exitosamente en ${bootcamp.name}! (No se pudo enviar el correo de confirmación)`);
+        }
+      }
+
       await fetchRegistrations();
     } catch (error) {
       console.error('Error al registrar:', error);

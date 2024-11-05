@@ -34,5 +34,5 @@ export const isUserAdmin = async (email: string | null): Promise<boolean> => {
   }
 };
 
-// Optional: Helper function to check if app is initialized
+
 export const getFirebaseApp = () => app;
